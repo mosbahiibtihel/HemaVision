@@ -2,7 +2,7 @@
 
 ## Blood Cell Classification with Transfer Learning
 
-HemaVision is a research/educational computer vision project for
+HemaVision is a  computer vision project for
 multi-class blood cell image classification using transfer learning.
 
 The project explores how pretrained deep learning models can be adapted
