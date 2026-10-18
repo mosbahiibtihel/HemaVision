@@ -13,4 +13,5 @@ models/*.ckpt
 
 .vscode/
 .DS_Store
-Thumbs.db
+Thumbs.db   
+results/test_samples/
