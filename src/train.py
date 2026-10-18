@@ -11,12 +11,11 @@ from model import build_model
 # -----------------------------
 
 BATCH_SIZE = 32
-EPOCHS = 1          # Start with 1 epoch to test everything
+EPOCHS = 5
 LEARNING_RATE = 1e-3
 
 MODEL_PATH = "models/hemavision_efficientnet_b0.pth"
 
-# Class weights calculated from the training dataset
 CLASS_WEIGHTS = torch.tensor([
     1.7545,  # basophil
     0.6854,  # eosinophil
@@ -46,32 +45,43 @@ def train_one_epoch(model, loader, criterion, optimizer, device):
         images = images.to(device)
         labels = labels.squeeze().long().to(device)
 
-        # Reset gradients
+        # 1. Reset previous gradients
         optimizer.zero_grad()
 
-        # Forward pass
+        # 2. Forward pass
         outputs = model(images)
 
-        # Calculate error
+        # 3. Calculate error
         loss = criterion(outputs, labels)
 
-        # Backpropagation
+        # 4. Backpropagation
         loss.backward()
 
-        # Update model
+        # 5. Update model weights
         optimizer.step()
 
         total_loss += loss.item()
 
         predictions = outputs.argmax(dim=1)
 
-        all_predictions.extend(predictions.cpu().numpy())
-        all_labels.extend(labels.cpu().numpy())
+        all_predictions.extend(
+            predictions.cpu().numpy()
+        )
+
+        all_labels.extend(
+            labels.cpu().numpy()
+        )
 
     average_loss = total_loss / len(loader)
 
     accuracy = (
-        sum(p == y for p, y in zip(all_predictions, all_labels))
+        sum(
+            p == y
+            for p, y in zip(
+                all_predictions,
+                all_labels
+            )
+        )
         / len(all_labels)
     )
 
@@ -111,13 +121,24 @@ def validate(model, loader, criterion, device):
 
             predictions = outputs.argmax(dim=1)
 
-            all_predictions.extend(predictions.cpu().numpy())
-            all_labels.extend(labels.cpu().numpy())
+            all_predictions.extend(
+                predictions.cpu().numpy()
+            )
+
+            all_labels.extend(
+                labels.cpu().numpy()
+            )
 
     average_loss = total_loss / len(loader)
 
     accuracy = (
-        sum(p == y for p, y in zip(all_predictions, all_labels))
+        sum(
+            p == y
+            for p, y in zip(
+                all_predictions,
+                all_labels
+            )
+        )
         / len(all_labels)
     )
 
@@ -136,14 +157,16 @@ def validate(model, loader, criterion, device):
 
 def main():
 
-    # Select CPU or GPU automatically
+    # CPU or GPU
     device = torch.device(
-        "cuda" if torch.cuda.is_available() else "cpu"
+        "cuda"
+        if torch.cuda.is_available()
+        else "cpu"
     )
 
     print("Device:", device)
 
-    # Load data
+    # Load datasets
     train_loader, val_loader, test_loader = get_dataloaders(
         batch_size=BATCH_SIZE
     )
@@ -160,19 +183,29 @@ def main():
         weight=class_weights
     )
 
-    # Only train parameters that require gradients
+    # Optimizer
     optimizer = Adam(
-        filter(lambda p: p.requires_grad, model.parameters()),
-        lr=LEARNING_RATE
+        filter(
+            lambda p: p.requires_grad,
+            model.parameters()
+        ),
+        lr=LEARNING_RATE,
+        weight_decay=1e-4
     )
 
     best_f1 = 0
 
-    # Training loop
+    # -----------------------------
+    # Epoch loop
+    # -----------------------------
+
     for epoch in range(EPOCHS):
 
-        print(f"\nEpoch {epoch + 1}/{EPOCHS}")
+        print(
+            f"\nEpoch {epoch + 1}/{EPOCHS}"
+        )
 
+        # Training
         train_loss, train_acc, train_f1 = train_one_epoch(
             model,
             train_loader,
@@ -181,6 +214,7 @@ def main():
             device
         )
 
+        # Validation
         val_loss, val_acc, val_f1 = validate(
             model,
             val_loader,
@@ -200,7 +234,7 @@ def main():
             f"Val Macro F1: {val_f1:.4f}"
         )
 
-        # Save the best model
+        # Save best model
         if val_f1 > best_f1:
 
             best_f1 = val_f1
